@@ -109,7 +109,14 @@ def simple_rclone_copy(sourcepath, destpath):
     return
 
 
+
+# For IA we use this:
+# ia upload desu-img-2018 /path/to/folder
+
 def dev():
+
+    # We want to run commands like this:
+    # rclone copy /path/to/folder desubackup:20181031
     simple_rclone_copy(
         sourcepath='',
         destpath=''

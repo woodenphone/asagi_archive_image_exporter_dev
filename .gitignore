@@ -3,6 +3,7 @@ debug/
 download/
 git_ignored/
 data/
+temp/
 
 # Misc junk files:
 *.pyc
