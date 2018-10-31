@@ -171,13 +171,13 @@ def cli():
 
 
 def main():
-    dev()
-##    cli()
+##    dev()
+    cli()
     return
 
 
 if __name__ == '__main__':
-    setup_logging(os.path.join("debug", "step1_dump_img_table.log.txt"))# Setup logging
+    common.setup_logging(os.path.join("debug", "step1_dump_img_table.log.txt"))# Setup logging
     try:
         main()
     # Log exceptions
