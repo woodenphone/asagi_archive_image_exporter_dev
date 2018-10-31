@@ -284,8 +284,10 @@ class YAMLConfig():
         # self.board_name
         assert(type(self.board_name) in [str, unicode])
         assert(len(self.board_name) != 0)
-
         return
+
+
+
 
 def cli():
     """Command line running"""
