@@ -1,6 +1,12 @@
+# Folders:
 debug/
 download/
 git_ignored/
 data/
+
+# Misc junk files:
 *.pyc
+
+# Configuration files:
 *config.py
+*.yaml
