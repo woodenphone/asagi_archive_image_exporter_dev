@@ -20,8 +20,9 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 # local
-from common import *# Things like logging setup
-import config_handlers# Code to load configuration
+import common# Things like logging setup
+import yaml_config_handlers
+import cli_config_handlers
 
 
 
@@ -105,8 +106,8 @@ def dev():
     logging.warning('running dev()')
 
     # Load configuration for run
-    config_obj = config_handlers.YAMLConfig_Zip(config_path=os.path.join('config_step1.yaml'))
-    config_obj = config_handlers.CommandLineConfigStep1()
+    config_obj = yaml_config_handlers.YAMLConfigStep2(config_path=os.path.join('config_step1.yaml'))
+##    config_obj = config_handlers.CommandLineConfigStep1()
     # Dump a table
     dump_partial_table(
         connection_string=config_obj.connection_string,

@@ -18,8 +18,8 @@ import zipfile
 import yaml# https://pyyaml.org/wiki/PyYAMLDocumentation
 # local
 from common import *# Things like logging setup
-import config_handlers# Code to load configuration
-
+import yaml_config_handlers
+import cli_config_handlers
 
 
 
@@ -202,8 +202,8 @@ def dev():
     logging.warning('running dev()')
 
     # Load configuration for run
-    config_obj = config_handlers.YAMLConfigStep2(config_path=os.path.join('config_step2.yaml'))
-    config_obj = CommandLineConfigStep2()
+    config_obj = yaml_config_handlers.YAMLConfigStep2(config_path=os.path.join('config_step2.yaml'))
+##    config_obj = CommandLineConfigStep2()
     # Run
     zip_from_csv(
         csv_filepath=config_obj.csv_filepath,
