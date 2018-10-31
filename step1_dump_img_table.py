@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 # local
 from common import *# Things like logging setup
-
+import config_handlers# Code to load configuration
 
 
 
@@ -103,14 +103,28 @@ def dump_table(connection_string, table_name, csv_filepath):
 def dev():
     """For development/debugging in IDE/editor without CLI arguments"""
     logging.warning('running dev()')
-    import config
 
+    # Load configuration for run
+    config_obj = config_handlers.YAMLConfig_Zip(config_path=os.path.join('config_step1.yaml'))
+    config_obj = config_handlers.CommandLineConfigStep1()
     # Dump a table
-    dump_table(
-        connection_string=config.CONNECT_STRING,
-        table_name=config.TABLE_NAME,
-        csv_filepath=config.CSV_FILEPATH
+    dump_partial_table(
+        connection_string=config_obj.connection_string,
+        table_name=config_obj.table_name,
+        csv_filepath=config_obj.csv_filepath,
+        lower_bound=config_obj.lower_bound,
+        upper_bound=config_obj.upper_bound,
     )
+
+
+##    import config
+##    # Dump a table
+##    dump_table(
+##        connection_string=config.CONNECT_STRING,
+##        table_name=config.TABLE_NAME,
+##        csv_filepath=config.CSV_FILEPATH
+##    )
+
 
 ##    # Dump a range within a table
 ##    dump_partial_table(
@@ -156,8 +170,8 @@ def cli():
 
 
 def main():
-##    dev()
-    cli()
+    dev()
+##    cli()
     return
 
 

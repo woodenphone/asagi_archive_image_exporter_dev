@@ -19,32 +19,86 @@ import yaml# https://pyyaml.org/wiki/PyYAMLDocumentation
 
 
 
-class YAMLConfig():
+##class YAMLConfig():
+##    """Handle reading, writing, and creating YAML config files.
+##    Generic useless superclass."""
+##    # This is what we expect the YAML file to contain
+##    confg_template = {
+##    }
+##    # Create empty vars
+##    config_path = None
+##
+##    def __init__(self, config_path):
+##        # Store argument value to class instance.
+##        self.config_path = config_path
+##        logging.debug('self.config_path = {0!r}'.format(self.config_path))
+##        # Ensure config dir exists.
+##        config_dir = os.path.dirname(config_path)
+##        if len(config_dir) > 0:# Only try to make a dir if ther is a dir to make.
+##            if not os.path.exists(config_dir):
+##                os.makedirs(config_dir)
+##        # Load/create config file
+##        if os.path.exists(self.config_path):
+##            # Load config file if it exists.
+##            self.load()
+##        else:
+##            # Create an example config file if no file exists.
+##            self.save()
+##        # Ensure config looks valid.
+##        self.validate()
+##        return
+##
+##    def load(self):
+##        """Load configuration from YAML file."""
+##        logging.warning('This line should never run!')
+##        return
+##
+##    def save(self):
+##        """Save current configuration to YAML file."""
+##        logging.warning('This line should never run!')
+##        return
+##
+##    def create(self):
+##        """Create a new blank YAML file."""
+##        logging.warning('This line should never run!')
+##        return
+##
+##    def validate(self):
+##        """Validate current configuration values and crash if any value is invalid."""
+##        logging.warning('This line should never run!')
+##        return
+
+
+
+class YAMLConfigStep1():
     """Handle reading, writing, and creating YAML config files.
-    Generic useless superclass."""
+    For step1_dump_img_table.py"""
     # This is what we expect the YAML file to contain
     confg_template = {
+        'connection_string': '',
+        'table_name': '',
         'csv_filepath': '',
-        'images_dir': '',
-        'zip_path': '',
-        'board_name': '',
+        'lower_bound': None,
+        'upper_bound': None
     }
     # Create empty vars
-    self.config_path = None
+    config_path = None
+    connection_string = ''
+    table_name = ''
     csv_filepath = ''
-    images_dir = ''
-    zip_path = ''
-    board_name = ''
+    lower_bound = ''
+    upper_bound = ''
 
     def __init__(self, config_path):
         # Store argument value to class instance.
         self.config_path = config_path
+        logging.debug('self.config_path = {0!r}'.format(self.config_path))
         # Ensure config dir exists.
         config_dir = os.path.dirname(config_path)
         if len(config_dir) > 0:# Only try to make a dir if ther is a dir to make.
             if not os.path.exists(config_dir):
                 os.makedirs(config_dir)
-
+        # Load/create config file
         if os.path.exists(self.config_path):
             # Load config file if it exists.
             self.load()
@@ -57,23 +111,78 @@ class YAMLConfig():
 
     def load(self):
         """Load configuration from YAML file."""
+        # Read the config from file.
+        logging.debug('Reading config from self.config_path = {0!r}'.format(self.config_path))
+        with open(self.config_path, 'rb') as load_f:
+            config_data_in = yaml.safe_load(load_f)
+        # Store values to class instance.
+        logging.debug('Loading config data config_data_in = {0!r}'.format(config_data_in))
+        self.connection_string = config_data_in['connection_string']
+        self.table_name = config_data_in['table_name']
+        self.csv_filepath = config_data_in['csv_filepath']
+        self.lower_bound = config_data_in['lower_bound']
+        self.upper_bound = config_data_in['upper_bound']
         return
 
     def save(self):
         """Save current configuration to YAML file."""
+        logging.debug('Saving current configuration to self.config_path = {0!r}'.format(self.config_path))
+        # Collect data together.
+        config_data_out = {
+            'connection_string': self.connection_string,
+            'table_name': self.table_name,
+            'csv_filepath': self.csv_filepath,
+            'lower_bound': self.lower_bound,
+            'upper_bound': self.upper_bound,
+        }
+        logging.debug('Saving config_data_out = {0!r}'.format(config_data_out))
+        # Write data to file.
+        with open(self.config_path, 'wb') as save_f:
+            yaml.dump(
+                data=config_data_out,
+                stream=save_f,
+                explicit_start=True,# Begin with '---'
+                explicit_end=True,# End with '...'
+                default_flow_style=False# Output as multiple lines
+            )
         return
 
     def create(self):
         """Create a new blank YAML file."""
+        # Write a generic example config file.
+        logging.debug('Creating example config file at self.config_path = {0!r}'.format(self.config_path))
+        with open(self.config_path, 'wb') as create_f:
+            yaml.dump(
+                data=confg_template,
+                stream=create_f,
+                explicit_start=True,# Begin with '---'
+                explicit_end=True,# End with '...'
+                default_flow_style=False# Output as multiple lines
+            )
         return
 
     def validate(self):
         """Validate current configuration values and crash if any value is invalid."""
+        # self.connection_string
+        assert(type(self.connection_string) in [str, unicode])
+        assert(len(self.connection_string) != 0)
+        # self.table_name
+        assert(type(self.table_name) in [str, unicode])
+        assert(len(self.table_name) != 0)
+        # self.csv_filepath
+        assert(type(self.csv_filepath) in [str, unicode])
+        assert(len(self.csv_filepath) != 0)
+        # self.lower_bound
+        assert(type(self.lower_bound) in [str, unicode, type(None)])
+        assert(len(self.lower_bound) != 0)
+        # self.upper_bound
+        assert(type(self.upper_bound) in [str, unicode, type(None)])
+        assert(len(self.upper_bound) != 0)
         return
 
 
 
-class YAMLConfig_Zip():
+class YAMLConfigStep2():
     """Handle reading, writing, and creating YAML config files.
     For step2_zip.py"""
     # This is what we expect the YAML file to contain
@@ -84,6 +193,7 @@ class YAMLConfig_Zip():
         'board_name': '',
     }
     # Create empty vars
+    config_path = None
     csv_filepath = ''
     images_dir = ''
     zip_path = ''
@@ -112,10 +222,11 @@ class YAMLConfig_Zip():
     def load(self):
         """Load configuration from YAML file."""
         # Read the config from file.
+        logging.debug('Reading config from self.config_path = {0!r}'.format(self.config_path))
         with open(self.config_path, 'rb') as load_f:
             config_data_in = yaml.safe_load(load_f)
-        logging.debug('Loading config_data_in = {0!r}'.format(config_data_in))
         # Store values to class instance.
+        logging.debug('Loading config data config_data_in = {0!r}'.format(config_data_in))
         self.csv_filepath = config_data_in['csv_filepath']
         self.images_dir = config_data_in['images_dir']
         self.zip_path = config_data_in['zip_path']
@@ -176,26 +287,82 @@ class YAMLConfig_Zip():
 
 
 
-class CommandLineConfig():
-    """Accept configuration from command-line arguments.
-    Generic useless superclass."""
-    # Create empty vars
+##class CommandLineConfig():
+##    """Accept configuration from command-line arguments.
+##    Generic useless superclass."""
+##    # Create empty vars
+##
+##    def __init__(self):
+##        self.load()
+##        self.validate()
+##        return
+##
+##    def load(self):
+##        """Read and store the command line arguments"""
+##        return
+##
+##    def validate(self):
+##        """Validate current configuration values and crash if any value is invalid."""
+##        return
 
-    def __init__(self):
-        self.load()
-        self.validate()
-        return
+
+class CommandLineConfigStep1():
+    """Accept configuration from command-line arguments.
+    For step1_dump_img_table.py"""
+    # Create empty vars
+    connection_string = ''
+    table_name = ''
+    csv_filepath = ''
+    lower_bound = ''
+    upper_bound = ''
 
     def load(self):
+        """Read and store the command line arguments"""
+        # Read args
+        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--connection_string', help='connection_string see https://docs.sqlalchemy.org/en/latest/core/engines.html',# https://docs.sqlalchemy.org/en/latest/core/engines.html
+                        type=str)
+        parser.add_argument('--table_name', help='table_name, mandatory.',
+                        type=str)
+        parser.add_argument('--csv_filepath', help='csv_filepath, mandatory.',
+                        type=str)
+        parser.add_argument('--lower_bound', help='lower_bound, defaults to None',
+                        type=str, default=None)
+        parser.add_argument('--upper_bound', help='upper_bound, defaults to None',
+                        type=str, default=None)
+        args = parser.parse_args()
+        logging.debug('args: {0!r}'.format(args))# Record CLI arguments
+        # Store to class instance
+        self.connection_string = args.connection_string
+        self.table_name = args.table_name
+        self.csv_filepath = args.csv_filepath
+        self.lower_bound = args.lower_bound
+        self.upper_bound = args.upper_bound
         return
 
     def validate(self):
         """Validate current configuration values and crash if any value is invalid."""
+        # self.connection_string
+        assert(type(self.connection_string) in [str, unicode])
+        assert(len(self.connection_string) != 0)
+        # self.table_name
+        assert(type(self.table_name) in [str, unicode])
+        assert(len(self.table_name) != 0)
+        # self.csv_filepath
+        assert(type(self.csv_filepath) in [str, unicode])
+        assert(len(self.csv_filepath) != 0)
+        # self.lower_bound
+        assert(type(self.lower_bound) in [str, unicode, type(None)])
+        assert(len(self.lower_bound) != 0)
+        # self.upper_bound
+        assert(type(self.upper_bound) in [str, unicode, type(None)])
+        assert(len(self.upper_bound) != 0)
         return
 
 
 
-class CommandLineConfig_Zip():
+class CommandLineConfigStep2():
     """Accept configuration from command-line arguments.
     For step2_zip.py"""
     # Create empty vars
@@ -204,12 +371,8 @@ class CommandLineConfig_Zip():
     zip_path = ''
     board_name = ''
 
-    def __init__(self):
-        self.load()
-        self.validate()
-        return
-
     def load(self):
+        """Read and store the command line arguments"""
         # Read args
         parser = argparse.ArgumentParser()
         parser.add_argument('--csv_filepath', help='csv_filepath, mandatory.',
