@@ -17,7 +17,7 @@ Step 2:
 Template:
 python step2_zip.py --csv_filepath="" --images_dir="" --path_to_output_zip_file="" --boardname=""
 Example:
-python step2_zip.py --csv_filepath="data/mysql_gif_images.csv" --images_dir="/var/www/foolfuuka/public/foolfuuka/boards/" --zip_path="data/mysql_gif_images.zip" --boardname="g"
+python step2_zip.py --csv_filepath="data/mysql_gif_images.csv" --images_dir="/var/www/foolfuuka/public/foolfuuka/boards/" --zip_path="data/mysql_gif_images.zip" --boardname="gif"
 
 
 

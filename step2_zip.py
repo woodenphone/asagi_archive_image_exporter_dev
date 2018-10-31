@@ -15,7 +15,7 @@ import os
 import csv
 import zipfile
 # Remote libraries
-import yaml
+import yaml# https://pyyaml.org/wiki/PyYAMLDocumentation
 # local
 from common import *# Things like logging setup
 
@@ -223,7 +223,7 @@ class YAMLConfig():
         if len(config_dir) > 0:# Only try to make a dir if ther is a dir to make.
             if not os.path.exists(config_dir):
                 os.makedirs(config_dir)
-
+        # Load/create config file
         if os.path.exists(self.config_path):
             # Load config file if it exists.
             self.load()
@@ -238,28 +238,35 @@ class YAMLConfig():
         """Load configuration from YAML file"""
         # Read the config from file.
         with open(self.config_path, 'rb') as load_f:
-            config_data = yaml.safe_load(load_f)
-        logging.debug('Loading config_data = {0!r}'.format(config_data))
+            config_data_in = yaml.safe_load(load_f)
+        logging.debug('Loading config_data_in = {0!r}'.format(config_data_in))
         # Store values to class instance.
-        self.csv_filepath = config_data['csv_filepath']
-        self.images_dir = config_data['images_dir']
-        self.zip_path = config_data['zip_path']
-        self.board_name = config_data['board_name']
+        self.csv_filepath = config_data_in['csv_filepath']
+        self.images_dir = config_data_in['images_dir']
+        self.zip_path = config_data_in['zip_path']
+        self.board_name = config_data_in['board_name']
         return
 
     def save(self):
         """Save current configuration to YAML file"""
         logging.debug('Saving current configuration to self.config_path = {0!r}'.format(self.config_path))
         # Collect data together.
-        output_dict = {
+        config_data = {
             'csv_filepath': self.csv_filepath,
             'images_dir': self.images_dir,
             'zip_path': self.zip_path,
             'board_name': self.board_name,
         }
+        logging.debug('Saving config_data = {0!r}'.format(config_data))
         # Write data to file.
         with open(self.config_path, 'wb') as save_f:
-            yaml.dump(output_dict, save_f)
+            yaml.dump(
+                data=config_data,
+                stream=save_f,
+                explicit_start=True,# Begin with '---'
+                explicit_end=True,# End with '...'
+                default_flow_style=False# Output as multiple lines
+            )
         return
 
     def create(self):
