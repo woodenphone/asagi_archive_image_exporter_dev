@@ -57,64 +57,93 @@ class Image(Base):
 
 
 
+def begin_db():
+    """Test starting DB as statements in a function rather than as global sequential statements"""
+    logging.debug('begin_db() called')
+    # Given a DB filepath, make sure we have a dir to put it in and create the connection string
+    db_path = os.path.join('temp','images.sqlite')
+    connect_string = 'sqlite:///'.format(db_path)
 
-# Given a DB filepath, make sure we have a dir to put it in and create the connection string
-db_path = os.path.join('temp','images.sqlite')
-connect_string = 'sqlite:///'.format(db_path)
+    # Ensure DB dir exists.
+    db_dir = os.path.dirname(db_path)
+    if len(db_dir) > 0:# Only try to make a dir if ther is a dir to make.
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
 
-# Ensure DB dir exists.
-db_dir = os.path.dirname(db_path)
-if len(db_dir) > 0:# Only try to make a dir if ther is a dir to make.
-    if not os.path.exists(db_dir):
-        os.makedirs(db_dir)
-
-# Create an engine that stores data in the local directory's
-# sqlalchemy_example.db file.
-engine = sqlalchemy.create_engine('sqlite:///temp/images.sqlite')
-
-
-# Create all tables in the engine. This is equivalent to "Create Table"
-# statements in raw SQL.
-Base.metadata.create_all(engine)
+    # Create an engine that stores data in the local directory's
+    # sqlalchemy_example.db file.
+    engine = sqlalchemy.create_engine('sqlite:///temp/images.sqlite')
 
 
-
-
-new_image = Image(board_name='mlp')
-session.add(new_image)
-session.commit()
+    # Create all tables in the engine. This is equivalent to "Create Table"
+    # statements in raw SQL.
+    Base.metadata.create_all(engine)
 
 
 
 
+    new_image = Image(board_name='mlp')
+    session.add(new_image)
+    session.commit()
+
+    logging.debug('begin_db() returning')
+    return
 
 
 
 
-class MiniDB():
+
+
+
+class MiniDB():# WIP
     """Handle DB things for these tools"""
-    # Create empty class vars
-    connection_string = None
-    db_filepath = None
+    # Create empty class vars. Any class instance vars should be initialized here to ensure a full list of them is easily available.
+    connection_string = None# SQLAlchemy connection string
+    db_filepath = None# Filepath of SQLite DB file
+    db_instance = None# Actual SQLAlchemy DB object
 
-    def __init__(self, connection_string):
+    def __init__(self, connection_string):# WIP
+        """Class startup"""
+        logging.debug('MiniDB.__init__() called')
+        self.connection_string = connection_string
         return
-    def connect(self):
+
+    def connect(self):# WIP
+        """Start up DB stuff so DB interaction can happen"""
+        logging.debug('Connecting to DB')
         return
 
+    def close(self):# WIP
+        """End DB insteraction gracefully"""
+        logging.debug('Closing DB Connection')
+        return
 
+    def add_img(self, md5_full, filename_full, filename_op, filename_small):# WIP
+        """
+        Add an image to the DB
+        (An image can be any stored media file, not just 2d static graphics. Basically can be arbitrary data.)
+        md5_full: md5 of the full image encoded as base 64
+        filename_full: Filename of the full-sized version of the image
+        filename_op: Filename of the OP version of the image
+        filename_small: Filename of the small version of the image
+        """
+        logging.debug('Adding image to DB')
+        return
 
-
-
-
-
-
+    def check_for_image(self, md5_full):# WIP
+        """
+        Check for the presence of an image in the DB
+        md5_full: md5 of the full image encoded as base 64
+        """
+        logging.debug('Checking if image is in DB')
+        return
 
 
 
 
 def main():
-    pass
+    begin_db()
+    return
 
 if __name__ == '__main__':
     common.setup_logging(os.path.join("debug", "minidb.log.txt"))# Setup logging
