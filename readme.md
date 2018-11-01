@@ -7,7 +7,7 @@ Example usage:
 `python step1_dump_img_table.py --connection_string="" --table_name="" --csv_filepath="" --lower_bound=""`
 #### Example:
 `python step1_dump_img_table.py --connection_string="mysql://root:toor@localhost/asagi" --table_name="gif_images" --csv_filepath="data/mysql_gif_images.csv" --lower_bound="1536638719722.webm"`
-## S#ep 2:
+## Step 2:
 ### Template:
 `python step2_zip.py --csv_filepath="" --images_dir="" --path_to_output_zip_file="" --boardname=""`
 #### Example:
