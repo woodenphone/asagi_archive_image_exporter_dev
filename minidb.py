@@ -14,7 +14,7 @@ import os
 # Remote libraries
 import sqlite3
 import sqlalchemy
-#from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base
 # local
 import common# Things like logging setup
 
@@ -40,21 +40,21 @@ def get_time_int_from_filename(filename):
 
 
 
-def get_connect_string():
-    # Given a DB filepath, make sure we have a dir to put it in and create the connection string
-    db_path = os.path.join('temp','images.sqlite')
-    logging.debug('db_path = {0!r}'.format(db_path))
-
-    # Ensure DB dir exists.
-    db_dir = os.path.dirname(db_path)
-    if len(db_dir) > 0:# Only try to make a dir if ther is a dir to make.
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-
-    # 'sqlite:///temp/images.sqlite'
-    connect_string = 'sqlite:///'.format(db_path)
-    logging.debug('connect_string = {0!r}'.format(connect_string))
-    return connect_string
+##def get_connect_string():
+##    # Given a DB filepath, make sure we have a dir to put it in and create the connection string
+##    db_path = os.path.join('temp','images.sqlite')
+##    logging.debug('db_path = {0!r}'.format(db_path))
+##
+##    # Ensure DB dir exists.
+##    db_dir = os.path.dirname(db_path)
+##    if len(db_dir) > 0:# Only try to make a dir if ther is a dir to make.
+##        if not os.path.exists(db_dir):
+##            os.makedirs(db_dir)
+##
+##    # 'sqlite:///temp/images.sqlite'
+##    connect_string = 'sqlite:///{0}'.format(db_path)
+##    logging.debug('connect_string = {0!r}'.format(connect_string))
+##    return connect_string
 
 
 
@@ -118,13 +118,13 @@ def begin_db():
         # TODO: Check that we're handling timezones correctly for timestamps.
         # Ideally we should be storing as timezone-agnostic UTC+0 Unix time or similar.
         __tablename__ = 'Images'
-        # Internal record keeping stuff
-        primaty_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique
-        record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
-        record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
+##        # Internal record keeping stuff
+##        primaty_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique
+##        record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
+##        record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
         # Actual data about the files
         board_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-        md5b64 = sqlalchemy.Column(sqlalchemy.String(32), nullable=False)#File MD5 stored as a base64 string. Fixed length
+        md5b64 = sqlalchemy.Column(sqlalchemy.String, nullable=False)#File MD5 stored as a base64 string. Fixed length
         disk_filename = sqlalchemy.Column(sqlalchemy.String, nullable=False)
         est_time_uploaded = sqlalchemy.Column(sqlalchemy.Integer)# ?might be unixtime? that this filename was uploaded, based on the fact that 4chan image numbers are timestamps.
 
@@ -238,7 +238,7 @@ logging.warning('Imports should really go at the beginning of the file.')
 # We should really understand what we're doing, but we don't always get everything we want.
 
 # We need a string to tell SQLAlchemy what DB we want to connect to
-connect_string = get_connect_string()
+connect_string = 'sqlite:///temp/images.sqlite'
 
 
 
@@ -262,9 +262,10 @@ class Image(Base):
     # Ideally we should be storing as timezone-agnostic UTC+0 Unix time or similar.
     __tablename__ = 'images'
     # Internal record keeping stuff
-    primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique
-    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
-    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
+    # May already be handled better by native SQLalchemy?
+    primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique. Ideally should have no significance.
+##    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
+##    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
     # Actual data about the files
     board_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     origin_media_id = sqlalchemy.Column(sqlalchemy.Integer)# (media_id column in Foolfuuka)
@@ -274,38 +275,87 @@ class Image(Base):
     filename_thumb_op = sqlalchemy.Column(sqlalchemy.String)# Filename of op thumbnail, if no filename then NULL. (preview_op column in Foolfuuka)
     filename_thumb_reply = sqlalchemy.Column(sqlalchemy.String)# Filename of reply thumbnail, if no filename then NULL. (preview_reply column in Foolfuuka)
 
-class File(Base):
-    """Table to store data for the images we've been working with.
-    One row per file."""
-    # TODO: Check that we're handling timezones correctly for timestamps.
-    # Ideally we should be storing as timezone-agnostic UTC+0 Unix time or similar.
-    __tablename__ = 'files'
-    # Internal record keeping stuff
-    primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique
-    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
-    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
-    # Actual data about the files
-    board_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    md5b64 = sqlalchemy.Column(sqlalchemy.String(32), nullable=False)#File MD5 stored as a base64 string. Fixed length
-    time_uploaded = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)# ?might be unixtime? that this filename was uploaded, based on the fact that 4chan image numbers are timestamps.
-    filename = sqlalchemy.Column(sqlalchemy.String)# Filename of full version, if no filename then NULL
+##class File(Base):
+##    """Table to store data for the images we've been working with.
+##    One row per file."""
+##    # TODO: Check that we're handling timezones correctly for timestamps.
+##    # Ideally we should be storing as timezone-agnostic UTC+0 Unix time or similar.
+##    __tablename__ = 'files'
+##    # Internal record keeping stuff
+##    primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique. Ideally should have no significance.
+##    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
+##    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
+##    # Actual data about the files
+##    board_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+##    md5b64 = sqlalchemy.Column(sqlalchemy.String(32), nullable=False)#File MD5 stored as a base64 string. Fixed length
+##    time_uploaded = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)# ?might be unixtime? that this filename was uploaded, based on the fact that 4chan image numbers are timestamps.
+##    filename = sqlalchemy.Column(sqlalchemy.String)# Filename of full version, if no filename then NULL
 # ===== /Define tables =====
 
 
 
 # Link table/class mapping to DB engine and make sure tables exist.
 Base.metadata.bind = engine# Link 'declarative' system to our DB
-Base.metadata.create_all()# Create tables based on classes
+Base.metadata.create_all(checkfirst=True)# Create tables based on classes
 
+
+# Create a session to interact with the DB
+SessionClass = sqlalchemy.orm.sessionmaker(bind=engine)
+session = SessionClass()
 # ===== Do things with the DB =====
 
+def calculate_time_uploaded(filename_full):
+    the_digits = filename_full.split('.')[0]
+    time_uploaded = int(the_digits)
+    return time_uploaded
+
+
+def try_to_add_image(session, image_to_add):
+    """Add an image if it is not already present in the table.
+    No checks to see which is a better version of the data, just checks for presence."""
+    # Check if in table
+    logging.info('image_to_add.md5b64 = {0!r}'.format(image_to_add.md5b64))
+    exists_q = session.query(Image)\
+        .filter(Image.md5b64 == image_to_add.md5b64)
+    first_result = exists_q.first()# Get first result, returns None if no results.
+    if first_result != None:
+        # Already in table
+        logging.debug('Image already in table, skipping')
+        pass# Do nothing.
+    else:
+        # Not already in table
+        logging.debug('Adding image to table')
+        # Add to DB.
+        session.add(new_image)
+        session.commit()
+    return
 
 
 
-new_image = Image(board_name='mlp',md5b64)
-session.add()
+
+range_images_q = session.query(Image)
+logging.info('len(range_images_q.all()) = {0!r}'.format(len(range_images_q.all())))# PERFORMANCE This might cause slowdowns, disable outside testing
+
+# Add one image
+new_image = Image(
+    board_name='mlp',
+    origin_media_id=16,
+    md5b64='qaM5T9h08awvwz86eLI+7w==',
+    time_uploaded = 1536638719722,
+    filename_full='1536638719722.webm',
+    filename_thumb_op='1536638719722s.jpg',
+    filename_thumb_reply='1536638719722s.jpg',
+)
+
+##session.add(new_image)
+##session.commit()
 
 
+try_to_add_image(session=session, image_to_add=new_image)
+
+# Import data from CSV
 
 
+range_images_q = session.query(Image)
+logging.info('len(range_images_q.all()) = {0!r}'.format(len(range_images_q.all())))# PERFORMANCE This might cause slowdowns, disable outside testing
 
