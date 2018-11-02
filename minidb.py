@@ -38,113 +38,6 @@ def get_time_int_from_filename(filename):
 
 
 
-
-
-##def get_connect_string():
-##    # Given a DB filepath, make sure we have a dir to put it in and create the connection string
-##    db_path = os.path.join('temp','images.sqlite')
-##    logging.debug('db_path = {0!r}'.format(db_path))
-##
-##    # Ensure DB dir exists.
-##    db_dir = os.path.dirname(db_path)
-##    if len(db_dir) > 0:# Only try to make a dir if ther is a dir to make.
-##        if not os.path.exists(db_dir):
-##            os.makedirs(db_dir)
-##
-##    # 'sqlite:///temp/images.sqlite'
-##    connect_string = 'sqlite:///{0}'.format(db_path)
-##    logging.debug('connect_string = {0!r}'.format(connect_string))
-##    return connect_string
-
-
-
-
-def begin_db():
-    """Test starting DB as statements in a function rather than as global sequential statements"""
-    logging.debug('begin_db() called')
-
-    # ===== Put the DB somewhere =====
-    # Given a DB filepath, make sure we have a dir to put it in and create the connection string
-    db_path = os.path.join('temp','images.sqlite')
-    logging.debug('db_path = {0!r}'.format(db_path))
-
-    # Ensure DB dir exists.
-    db_dir = os.path.dirname(db_path)
-    if len(db_dir) > 0:# Only try to make a dir if ther is a dir to make.
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-
-    # 'sqlite:///temp/images.sqlite'
-    connect_string = 'sqlite:///'.format(db_path)
-    logging.debug('connect_string = {0!r}'.format(connect_string))
-
-
-
-    # ===== Start and connect to DB =====
-    # Create an engine that stores data in the local directory's
-    # sqlalchemy_example.db file.
-    engine = sqlalchemy.create_engine(connect_string, echo=True)
-
-
-    Base = declarative_base()
-
-    # Create all tables in the engine. This is equivalent to "Create Table"
-    # statements in raw SQL.
-    Base.metadata.create_all(engine)
-
-
-    # Bind the engine to the metadata of the Base class so that the
-    # declaratives can be accessed through a DBSession instance
-    Base.metadata.bind = engine
-
-    # ===== Start a session with the DB so we can interact with it =====
-
-    DBSession = sqlalchemy.orm.sessionmaker(bind=engine)
-    # A DBSession() instance establishes all conversations with the database
-    # and represents a "staging zone" for all the objects loaded into the
-    # database session object. Any change made against the objects in the
-    # session won't be persisted into the database until you call
-    # session.commit(). If you're not happy about the changes, you can
-    # revert all of them back to the last commit by calling
-    # session.rollback()
-    session = DBSession()
-
-
-
-
-    # ===== Define tables =====
-    class Image(Base):
-        """Table to store data for the images we've been working with"""
-        # TODO: Check that we're handling timezones correctly for timestamps.
-        # Ideally we should be storing as timezone-agnostic UTC+0 Unix time or similar.
-        __tablename__ = 'Images'
-##        # Internal record keeping stuff
-##        primaty_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique
-##        record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
-##        record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
-        # Actual data about the files
-        board_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-        md5b64 = sqlalchemy.Column(sqlalchemy.String, nullable=False)#File MD5 stored as a base64 string. Fixed length
-        disk_filename = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-        est_time_uploaded = sqlalchemy.Column(sqlalchemy.Integer)# ?might be unixtime? that this filename was uploaded, based on the fact that 4chan image numbers are timestamps.
-
-
-
-    # ===== Do stuff with our DB =====
-
-    new_image = Image(board_name='mlp')
-    session.add(new_image)
-    session.commit()
-
-    logging.debug('begin_db() returning')
-    return
-
-
-
-
-
-
-
 class MiniDB():# WIP
     """Handle DB things for these tools, but using classes!"""
     # Create empty class vars. Any class instance vars should be initialized here to ensure a full list of them is easily available.
@@ -153,18 +46,19 @@ class MiniDB():# WIP
     db_instance = None# Actual SQLAlchemy DB object
 
     def __init__(self, connection_string):# WIP
-        """Class startup"""
+        """Class startup."""
         logging.debug('MiniDB.__init__() called')
         self.connection_string = connection_string
         return
 
     def connect(self):# WIP
-        """Start up DB stuff so DB interaction can happen"""
+        """Start up DB stuff so DB interaction can happen."""
         logging.debug('Connecting to DB')
         return
 
     def close(self):# WIP
-        """End DB insteraction gracefully"""
+        """End DB insteraction gracefully.
+        The class instance should be mostly useless after this is called."""
         logging.debug('Closing DB Connection')
         return
 
@@ -180,13 +74,175 @@ class MiniDB():# WIP
         logging.debug('Adding image to DB')
         return
 
-    def check_for_image(self, md5_full):# WIP
+    def check_for_image(self, md5_full):
         """
         Check for the presence of an image in the DB
         md5_full: md5 of the full image encoded as base 64
         """
+        # TODO: Better comparison method, using only md5 might miss results?
         logging.debug('Checking if image is in DB')
+        # Check if in table
+        logging.info('image_to_add.md5b64 = {0!r}'.format(image_to_add.md5b64))
+        exists_q = session.query(Image)\
+            .filter(Image.md5b64 == image_to_add.md5b64)
+        first_result = exists_q.first()# Get first result, returns None if no results.
+        if first_result != None:
+            # Already in table
+            logging.debug('Image is in table')
+            return first_result# Return result instead of just True so that the row's data is available.
+        else:
+            # Not already in table
+            logging.debug('Image not in table')
+            return False# False to signify no match.
+
+    def decide_should_we_add_image(self, new_image):# WIP
+        """Decide if an image should be inserted to the table"""
+        # TODO: Better comparison method, using only md5 might miss results?
+        # TODO: This function might be pointlessly redundant, consider removing later?
+        return check_for_image(self, md5_full=new_image.md5_full)
+
+
+
+
+
+class CSVExporterZipper():# WIP
+    """This may or may not go somewhere"""
+    def __init__(self):# WIP
         return
+
+    def add_to_zip(zip_obj, filepath, internal_path):# WIP
+        """Return whether file was added to zip"""
+        try:
+    ##        logging.debug('Zipping {0!r} as {1!r}'.format(filepath, internal_path))# PERFORMANCE This might cause slowdowns, disable outside testing
+            zip_obj.write(filepath, internal_path)
+            return True
+        except OSError, err:
+            logging.error(err)
+        return False
+
+    def generate_image_filepath(board_dir, filename):# WIP
+        # Expects filename to look like: '1536631035276.webm'
+        # Outputs: 'BASE/153/6/1536631035276.webm'
+        # boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+        # base/image/1536/63/1536631035276.webm
+        assert(len(filename) > 4)# We can't generate a path is this is lower, and the value is based on unix time so should always be over 1,000,000
+        media_filepath = os.path.join(board_dir, filename[0:4], filename[4:6], filename)# string positions 0,1,2,3/4,5/filename
+        return media_filepath
+
+    def generate_full_image_filepath(images_dir, board_name, filename):# WIP
+        # boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+        board_dir = os.path.join(images_dir, board_name,  'image')
+        full_image_filepath = generate_image_filepath(board_dir, filename)
+        return full_image_filepath
+
+    def generate_thumbnail_image_filepath(images_dir, board_name, filename):# WIP
+        # boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+        board_dir = os.path.join(images_dir, board_name, 'thumb')
+        full_image_filepath = generate_image_filepath(board_dir, filename)
+        return full_image_filepath
+
+    def attempt_to_export_csv_row_dict(self,row):# WIP
+        """
+        Given a dict where columname:value, using Foolfuuka columns,
+        Check whether to export it and then export/not as approriate
+        """
+        # Check if hash is in DB
+        md5_full = row['media_hash']
+        existing_row = self.check_for_image(md5_full)
+        if existing_row:
+            # Do not export
+            logging.debug('Not exporting this image')
+            return
+        else:
+            # Export
+            logging.debug('Exporting this image')
+            # Add files to zip
+        return
+
+    def export_csv_rows(self, rows):
+        row_counter = 0
+        for row in rows:
+            row_counter += 0
+            attempt_to_export_csv_row_dict(self,row)
+        return
+
+    def export_from_csv_file(self, csv_filepath):# WIP
+        # Validate input values, such as paths
+        # Open zip file
+        # Add CSV file to zip
+        # Open CSV file
+        # Process rows
+        return
+
+
+
+class DBExporterZipper():# WIP
+    """
+    Export directly from a Foolfuuka DB into a zip file
+    Zip file contains:
+        images from selected range
+        image table row data from selected range
+        metadata JSON containing run parameters
+    """
+    def __init__(self):# WIP
+        return
+
+    def export_range(self, low_value, high_value, images_dir, zip_filepath):# WIP
+        """Export a range of images"""
+        # Record run parameters temporarily
+        self.create_metadata_json()
+        # Prepare zip file
+        # Run a SELECT query for the range
+        # Iterate over results
+        # Record run parameters, overwriting old file
+        return
+
+    def export_rows(self, rows):# WIP
+        # Dump all row data to file
+        # Iterate over results and zip files
+        self.row_counter = 0
+        for row in rows:
+            self.row_counter += 1
+            self.export_row(row)
+            pass
+        return
+
+    def export_row(self, row):# WIP
+        # Zip files
+        return
+
+    def create_metadata_json(self, short=False, metadata_filepath):# WIP
+        """Dump class values to JSON to record what went on in a run
+        if short is True, only include things relevant to the start of the run"""
+        logging.debug('metadata_filepath = {0!r}'.format(metadata_filepath))
+        logging.debug('short = {0!r}'.format(short))
+        # Prepare the data to export
+        metadata_dict = {}
+        # Add short/common values
+        metadata_dict['metadata_file_format_version'] = 0,# Update this every time this format changes. (There should be a unique format version number for each format that ever actually gets used)
+        metadata_dict['run_finish_time'] = None# TODO: Unix time int should go here, generated when run starts.
+        metadata_dict['metadata_dump_time'] = None# TODO: Unix time int should go here, generated when run starts.
+        metadata_dict['low_value'] = None# TODO: low value of export range
+        metadata_dict['high_value'] = None# TODO: High value of export range
+        if not short:
+            # Add long form values
+            metadata_dict['run_finish_time'] = None# TODO: Unix time int should go here, generated when run ends.
+            metadata_dict['number_of_files_exported'] = None# TODO:
+            metadata_dict['number_of_rows_exported'] = None# TODO:
+            pass
+        logging.debug('metadata_dict = {0!r}'.format(metadata_dict))
+        # Convert to JSON
+        metadata_json = json.dumps(metadata_dict)
+        # Write to file
+        metadata_dir = os.path.dirname(metadata_filepatn)
+        if (len(metadata_dir) != 0):
+            if not os.path.exists(metadata_filepath):
+                os.mkdirs()
+        with open(metadata_filepath, 'wb') as meta_f:
+            meta_f.write(metadata_json)
+        logging.debug('Finished exporting metadata.')
+        return
+
 
 
 
@@ -199,14 +255,14 @@ def main():
 
 
 if __name__ == '__main__':
-    common.setup_logging(os.path.join("debug", "minidb.log.txt"))# Setup logging
+    common.setup_logging(os.path.join("debug", "minidb.log.txt"))# Setup logging globally
     try:
         main()
     # Log exceptions
     except Exception, e:
         logging.critical("Unhandled exception!")
         logging.exception(e)
-    logging.info( "Program finished.")
+    logging.info("Program finished.")
 
 
 
@@ -264,8 +320,10 @@ class Image(Base):
     # Internal record keeping stuff
     # May already be handled better by native SQLalchemy?
     primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique. Ideally should have no significance.
-##    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), server_default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
+##    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
 ##    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
+##    exported = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)# Has this image already been exported to zip? True=yes, False=No. Should never be NULL.
+    exported_date = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), default=None)# Unix time. When this row was last exported. If not previously exported then NULL.
     # Actual data about the files
     board_name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     origin_media_id = sqlalchemy.Column(sqlalchemy.Integer)# (media_id column in Foolfuuka)
