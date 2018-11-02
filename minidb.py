@@ -184,6 +184,18 @@ class DBExporterZipper():# WIP
         image table row data from selected range
         metadata JSON containing run parameters
     """
+    # Class instance variables
+    db_class = None
+    db_session = None
+    low_value = None
+    high_value = None
+    most_recent_row_primary_key = None
+    zip_filepath = None
+    images_dir = None
+    metadata_filepath = None
+    row_counter = None
+    file_counter = None
+
     def __init__(self):# WIP
         return
 
@@ -208,7 +220,13 @@ class DBExporterZipper():# WIP
         return
 
     def export_row(self, row):# WIP
-        # Zip files
+        # Zip row files
+        # media
+        self.file_counter += 1
+        # preview_op
+        self.file_counter += 1
+        # preview_reply
+        self.file_counter += 1
         return
 
     def create_metadata_json(self, short=False, metadata_filepath):# WIP
