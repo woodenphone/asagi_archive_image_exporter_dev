@@ -21,15 +21,6 @@ import common# Things like logging setup
 # ===== Let us define tables =====
 # We should really understand what we're doing, but we don't always get everything we want.
 
-# We need a string to tell SQLAlchemy what DB we want to connect to
-connect_string = 'sqlite:///temp/images.sqlite'
-
-
-
-engine = sqlalchemy.create_engine(# Start the DB engine
-    connect_string,# Points SQLAlchemy at a DB
-    echo=True# Output DB commands to log
-)
 
 Base = declarative_base()# Setup system to keep track of tables and classes
 
@@ -46,7 +37,7 @@ class Image(Base):
     primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique. Ideally should have no significance.
 ##    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
 ##    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
-##    exported = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)# Has this image already been exported to zip? True=yes, False=No. Should never be NULL.
+    exported = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)# Has this image already been exported to zip? True=yes, False=No. Should never be NULL.
     exported_date = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), default=None)# Unix time. When this row was last exported. If not previously exported then NULL.
     broken = sqlalchemy.Column(sqlalchemy.Integer, default=0, nullable=False)# Is there a problem with the image somehow? e.g. expected file does not exist. (0=No problem, all other integers=some specific problem case.)
     # Actual data about the files
@@ -77,14 +68,6 @@ class Image(Base):
 
 
 
-# Link table/class mapping to DB engine and make sure tables exist.
-Base.metadata.bind = engine# Link 'declarative' system to our DB
-Base.metadata.create_all(checkfirst=True)# Create tables based on classes
-
-
-# Create a session to interact with the DB
-SessionClass = sqlalchemy.orm.sessionmaker(bind=engine)
-session = SessionClass()
 
 # Notes
 # https://www.pythoncentral.io/introductory-tutorial-python-sqlalchemy/
@@ -130,6 +113,23 @@ def get_time_int_from_filename(filename):
     return time_int
 
 
+def convert_filepath_to_connect_string(filepath):
+    """Convert a SQLite file filepath to a SQLAlchemy connection string"""
+    # Convert windows-style backslashes to required forwardslashes
+    fp_fslash = re.replace(r'\\\\', '/', filepath)
+    connect_string = 'sqlite:///{0}'.format(fp_fslash)
+    return connect_string
+
+
+def get_current_unix_time_int():
+    """Return the current UTC+0 unix time as an int"""
+    # Get current time at UTC+0
+    # Convert to time tuple
+    # Convert time tuple to float seconds since epoch
+    # Convert float to int
+    current_unix_time_int = int(time.mktime(datetime.datetime.utcnow().timetuple()))
+    return current_unix_time_int
+
 
 
 class MiniDB():# WIP
@@ -137,35 +137,81 @@ class MiniDB():# WIP
     # Create empty class vars. Any class instance vars should be initialized here to ensure a full list of them is easily available.
     connection_string = None# SQLAlchemy connection string
     db_filepath = None# Filepath of SQLite DB file
-    db_instance = None# Actual SQLAlchemy DB object
+    db_dir = None# Dir portion of SQLite DB filepath
+    engine = None# Actual SQLAlchemy DB engine object
+    session = None# Actual SQLAlchemy DB session object
 
-    def __init__(self, connection_string):# WIP
+    def __init__(self, db_filepath):# WIP
         """Class startup."""
         logging.debug('MiniDB.__init__() called')
-        self.connection_string = connection_string
+        self.db_filepath = db_filepath
+        self.db_dir, self.db_filename = os.path.split(self.db_filepath)
+        assert(len(self.db_filename) != 0)# We need a filename
+
+        self.connection_string = convert_filepath_to_connect_string(self.db_filepath)
         return
 
     def connect(self):# WIP
         """Start up DB stuff so DB interaction can happen."""
         logging.debug('Connecting to DB')
+        # Ensure DB has a dir to be put in
+        if len(self.db_dir) != 0:
+            if not os.path.exists(self.db_dir):
+                os.makedirs(self.db_dir)
+        # Start the DB engine
+        self.engine = sqlalchemy.create_engine(
+            connection_string,# Points SQLAlchemy at a DB
+            echo=True# Output DB commands to log
+        )
+        # Link table/class mapping to DB engine and make sure tables exist.
+        Base.metadata.bind = engine# Link 'declarative' system to our DB
+        Base.metadata.create_all(checkfirst=True)# Create tables based on classes
+        # Create a session to interact with the DB
+        self.SessionClass = sqlalchemy.orm.sessionmaker(bind=engine)
+        self.db_session = self.SessionClass()
         return
 
     def close(self):# WIP
         """End DB insteraction gracefully.
         The class instance should be mostly useless after this is called."""
         logging.debug('Closing DB Connection')
+        assert(False)# TODO: Impliment
         return
 
-    def add_img(self, md5_full, filename_full, filename_op, filename_small):# WIP
+    def add_img(self, board_name, origin_media_id, md5b64, time_uploaded,
+        filename_full, filename_op, filename_small):
         """
-        Add an image to the DB
+        Add an image to the DB.
+        This does not commit changes on it's own.
         (An image can be any stored media file, not just 2d static graphics. Basically can be arbitrary data.)
-        md5_full: md5 of the full image encoded as base 64
-        filename_full: Filename of the full-sized version of the image
-        filename_op: Filename of the OP version of the image
-        filename_small: Filename of the small version of the image
+        board_name: shortname of board, we import from the FF <BOARDNAME>_images table.
+        origin_media_id: FF 'media_id'.
+        md5b64: md5 of the full image encoded as base 64, FF 'media_hash'.
+        time_uploaded: The unixtime the image was uploaded, can be determined from the digits in the filename.
+        filename_full: Filename of the full-sized version of the image, FF 'media'.
+        filename_op: Filename of the OP version of the image, FF 'preview_op'.
+        filename_small: Filename of the small version of the image, FF 'preview_reply'.
         """
         logging.debug('Adding image to DB')
+        image_already_added = self.check_for_image(md5_full)
+        if image_already_added:
+            logging.error('Image is already in DB')
+            return
+        new_image = Image(
+            # Internal recordkeeping
+            exported=False,# New image, therefore not exported
+            exported_date=None,# New image, therefore not exported
+            broken=0,# Not known to be broken
+            # Actual data about image/files
+            board_name=board_name,
+            origin_media_id=origin_media_id,
+            md5b64=md5b64,
+            time_uploaded=time_uploaded,
+            filename_full=filename_full,
+            filename_op=filename_op,
+            filename_small=filename_small
+        )
+        self.db_session.add(new_image)
         return
 
     def check_for_image(self, md5_full):
@@ -195,17 +241,35 @@ class MiniDB():# WIP
         # TODO: This function might be pointlessly redundant, consider removing later?
         return check_for_image(self, md5_full=new_image.md5_full)
 
+    def find_new(self, max_rows):
+        logging.debug('Finding unprocessed rows, max_rows = {0!r}'.format(max_rows))
+        query = self.db_session.query(Image)\
+            .filter_by(exported=False)\
+            .limit(max_rows)
+        logging.debug('Finished finding rows len(rows) = {0!r}'.format(len(rows)))
+        return rows
 
+    def mark_done(self, row):
+        logging.debug('Marking row as dome, row.primary_key = {0!r}'.format(row.primary_key))
+        unix_time_now = get_current_unix_time_int()
+        row.exported = True
+        row.exported_date = datetime.datetime.utcnow
+        return
 
+    def commit(self):
+        """If a commit happens, it happens in this method"""
+        logging.debug('Committing')
+        self.db_session.commit()
+        return
 
-
-
-
+    def import_range_from_ff(self):
+        """Import a group of rows from foolfuuka"""
+        assert(False)# TODO: Impliment
+        return
 
 
 def main():
     logging.debug('main() called')
-##    begin_db()
     logging.debug('main() returning')
     return
 
