@@ -191,6 +191,7 @@ class YAMLConfigStep2():
         'images_dir': '',
         'zip_path': '',
         'board_name': '',
+        'db_path': '',
     }
     # Create empty vars
     config_path = None
