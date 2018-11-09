@@ -40,7 +40,7 @@ class Image(Base):
     primary_key = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)# Just has to be unique. Ideally should have no significance.
 ##    record_created = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), default=sqlalchemy.func.utcnow())# Unix time. When this row was created.
 ##    record_updated = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), onupdate=sqlalchemy.func.utcnow())# Unix time. When this row was last updated.
-    exported = sqlalchemy.Column(sqlalchemy.Boolean, default=None)# Has this image already been exported to zip? True=yes, False=Any other value.
+    exported = sqlalchemy.Column(sqlalchemy.Boolean, default=False)# Has this image already been exported to zip? True=yes, False=Any other value.
     exported_date = sqlalchemy.Column(sqlalchemy.DateTime(timezone=True), default=None)# Unix time. When this row was last exported. If not previously exported then NULL.
     broken = sqlalchemy.Column(sqlalchemy.Integer, default=0, nullable=False)# Is there a problem with the image somehow? e.g. expected file does not exist. (0=No problem, all other integers=some specific problem case.)
     # Actual data about the files
@@ -150,7 +150,7 @@ class MiniDB():# WIP
         # Start the DB engine
         self.engine = sqlalchemy.create_engine(
             self.connection_string,# Points SQLAlchemy at a DB
-            echo=True# Output DB commands to log
+            echo=self.echo_sql# Output DB commands to log
         )
         # Link table/class mapping to DB engine and make sure tables exist.
         Base.metadata.bind = self.engine# Link 'declarative' system to our DB
@@ -185,12 +185,12 @@ class MiniDB():# WIP
         logging.debug('Adding image to DB')
         image_already_added = self.check_for_image(md5_full)
         if image_already_added:
-            logging.error('Image is already in DB')
+            logging.warning('Image is already in DB')
             return
         new_image = Image(
             # Internal recordkeeping
-            exported=None,# New image, therefore not exported
-            exported_date=None,# New image, therefore not exported
+            exported=False,# New image, therefore not exported, therefore False
+            exported_date=None,# New image, therefore not exported. Null represents a lack of date information.
             broken=0,# Not known to be broken
             # Actual data about image/files
             board_name=board_name,
@@ -242,9 +242,8 @@ class MiniDB():# WIP
 
     def mark_done(self, row):
         logging.debug('Marking row as dome, row.primary_key = {0!r}'.format(row.primary_key))
-        unix_time_now = get_current_unix_time_int()
         row.exported = True
-        row.exported_date = datetime.datetime.utcnow
+        row.exported_date = datetime.datetime.utcnow()
         return
 
     def commit(self):
@@ -258,6 +257,11 @@ class MiniDB():# WIP
         assert(False)# TODO: Impliment
         return
 
+    def count_total_rows(self):
+        query = self.session.query(Image)
+        num_rows = query.count()
+        logging.debug('num_rows={0!r}'.format(num_rows))
+        return num_rows
 
 def main():
     logging.debug('main() called')
