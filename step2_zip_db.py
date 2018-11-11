@@ -69,20 +69,20 @@ def add_to_zip(zip_obj, filepath, internal_path):
         logging.error(err)
     return False
 
-
-def add_column_to_zip(zip_obj, column_value, images_dir, board_name):
-    filepath = make_img_path(root=images_dir, m_type='', filename=column_value)
-    internal_path = make_img_path(root=images_dir, m_type='', filename=column_value)
-    return add_to_zip(zip_obj, filepath, internal_path)
-
-
-def add_row_to_zip(zip_obj, row, images_dir, board_name):
-    """Add the files for one row to the supplied zip file."""
-    column_names = ['media', 'preview_op', 'preview_reply']
-    for column_name in column_names:
-        column_value = row[column_value]
-        add_column_to_zip(zip_obj, column_value, images_dir, board_name)
-    return
+##
+##def add_column_to_zip(zip_obj, column_value, images_dir, board_name):
+##    filepath = make_img_path(root=images_dir, m_type='', filename=column_value)
+##    internal_path = make_img_path(root=images_dir, m_type='', filename=column_value)
+##    return add_to_zip(zip_obj, filepath, internal_path)
+##
+##
+##def add_row_to_zip(zip_obj, row, images_dir, board_name):
+##    """Add the files for one row to the supplied zip file."""
+##    column_names = ['media', 'preview_op', 'preview_reply']
+##    for column_name in column_names:
+##        column_value = row[column_value]
+##        add_column_to_zip(zip_obj, column_value, images_dir, board_name)
+##    return
 
 
 def dump_rows_to_csv(query, csv_filepath):
@@ -231,9 +231,10 @@ def export_to_zip(db, zip_filepath, images_dir, run_name, board_name, temp_dir='
         logging.info('number_of_rows_to_export={0!r}'.format(number_of_rows_to_export))
         # Dump exported rows to CSV and put that into the zip file
         # Dump rows to CSV file
+        logging.debug('Dummping rows to export as CSV to {0!r}'.format(export_csv_filepath))
         dump_rows_to_csv(image_query, export_csv_filepath)
         # Add CSV file to zip
-        logging.debug('Adding media rows CSV file to zip')
+        logging.debug('Adding media rows CSV file to zip as {0!r}'.format(export_csv_filename))
         add_to_zip(
             zip_obj=myzip,
             filepath=os.path.join(export_csv_filepath),
@@ -249,34 +250,18 @@ def export_to_zip(db, zip_filepath, images_dir, run_name, board_name, temp_dir='
             if ((export_row_counter % 100) == 0):
                 logging.info('Exported {0} rows.'.format(export_row_counter))
             logging.debug('image_row={0!r}'.format(image_row))# DISABLE FOR PERFORMANCE
-
             # For each result to export:
             row_primary_key = image_row.origin_media_id
-            print('SIMULATE zipping result general')
-
+            logging.debug('row_primary_key={0!r}')
             # Add filename_full (FF media) to zip
-            logging.info('SIMULATE zipping result filename_full (FF media)')
             filename_full = image_row.filename_full
             logging.debug('filename_full={0!r}')
             if filename_full:
-                # Generate paths
-                filepath_full = generate_full_image_filepath(# Filesystem
-                    images_dir=images_dir,
-                    board_name=board_name,
-                    filename=filename_full
-                )
-                zip_filepath_full = generate_full_image_filepath(# Zip internal
-                    images_dir='',
-                    board_name=board_name,
-                    filename=filename_full
-                )
-                # Put in zip file
-                media_success = add_to_zip(
-                    zip_obj=myzip,
-                    filepath=filepath_full,
-                    internal_path=zip_filepath_full,# Zip internal
-                )
-                if media_success:
+                if add_to_zip(
+                    zip_obj = myzip,
+                    filepath = make_img_path(root=images_dir, m_type='image', filename=filename_full),
+                    internal_path = make_img_path(root=images_dir, m_type='image', filename=filename_full)
+                ):
                     success_file_counter += 1
                 else:
                     failed_file_counter += 1
@@ -284,26 +269,12 @@ def export_to_zip(db, zip_filepath, images_dir, run_name, board_name, temp_dir='
             # Add filename_thumb_op (FF preview_op) to zip
             filename_thumb_op = image_row.filename_thumb_op
             logging.debug('filename_thumb_op={0!r}')
-
             if filename_thumb_op:
-                # Generate paths
-                thumb_op_filepath = generate_thumbnail_image_filepath(# Filesystem
-                    images_dir=images_dir,
-                    board_name=board_name,
-                    filename=filename_thumb_op
-                )
-                thumb_op_zippath = generate_thumbnail_image_filepath(# Zip internal
-                    images_dir='',
-                    board_name=board_name,
-                    filename=filename_thumb_op
-                )
-                # Put in zip file
-                preview_op_success = add_to_zip(
-                    zip_obj=myzip,
-                    filepath=thumb_op_filepath,
-                    internal_path=thumb_op_zippath,# Zip internal
-                )
-                if preview_op_success:
+                if add_to_zip(
+                    zip_obj = myzip,
+                    filepath = make_img_path(root=images_dir, m_type='thumb', filename=filename_thumb_op),
+                    internal_path = make_img_path(root=images_dir, m_type='thumb', filename=filename_thumb_op)
+                ):
                     success_file_counter += 1
                 else:
                     failed_file_counter += 1
@@ -311,25 +282,12 @@ def export_to_zip(db, zip_filepath, images_dir, run_name, board_name, temp_dir='
             # Add filename_thumb_reply (FF preview_reply) to zip
             filename_thumb_reply = image_row.filename_thumb_reply
             logging.debug('filename_thumb_reply={0!r}')
-            if rowfilename_thumb_reply:
-                # Generate paths
-                thumb_reply_filepath = generate_thumbnail_image_filepath(# Filesystem
-                    images_dir=images_dir,
-                    board_name=board_name,
-                    filename=filename_thumb_reply
-                )
-                thumb_reply_zippath = generate_thumbnail_image_filepath(# Zip internal
-                    images_dir='',
-                    board_name=board_name,
-                    filename=filename_thumb_reply
-                )
-                # Put in zip file
-                preview_reply_success = add_to_zip(
-                    zip_obj=myzip,
-                    filepath=thumb_reply_filepath,
-                    internal_path=thumb_reply_zippath
-                )
-                if preview_reply_success:
+            if filename_thumb_reply:
+                if add_to_zip(
+                    zip_obj = myzip,
+                    filepath = make_img_path(root=images_dir, m_type='thumb', filename=filename_thumb_reply),
+                    internal_path = make_img_path(root=images_dir, m_type='thumb', filename=filename_thumb_reply)
+                ):
                     success_file_counter += 1
                 else:
                     failed_file_counter += 1
@@ -395,12 +353,16 @@ def connect_to_sqllite_db():
 def dev():
     """For development/debugging in IDE/editor without CLI arguments"""
     logging.warning('running dev()')
+    # Connect to exporter DB
     db = connect_to_sqllite_db()
-    # Settings for MySQL -> sqlite
-    # Settings for MySQL -> csv
 
+    # MySQL -> sqlite:
+    # TODO FIXME
 
-    # Settings for csv -> sqlite
+    # MySQL -> csv:
+    # TODO FIXME
+
+    # csv -> sqlite:
     import_from_csv(
         db=db,
         csv_filepath=os.path.join('data', 'mysql_gif_images.csv'),
@@ -408,7 +370,7 @@ def dev():
         max_import_rows=10000
     )
 
-    # Settings for sqlite -> zip
+    # sqlite -> zip:
     run_name = ''
     export_to_zip(
         db=db,
@@ -438,9 +400,3 @@ if __name__ == '__main__':
         logging.critical("Unhandled exception!")
         logging.exception(e)
     logging.info("Program finished.")
-
-
-
-
-
-
