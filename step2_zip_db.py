@@ -42,6 +42,7 @@ def get_current_unix_time_int():
     current_unix_time_int = int(time.mktime(datetime.datetime.utcnow().timetuple()))
     return current_unix_time_int
 
+
 def save_to_json_file(data, filepath):
     """Save some python data into JSON"""
     assert(type(filepath) in [str, unicode])
@@ -52,6 +53,92 @@ def save_to_json_file(data, filepath):
         data=data_json
     )
     return
+
+
+def add_to_zip(zip_obj, filepath, internal_path):
+    """Return whether file was added to zip"""
+    assert(type(filepath) in [str, unicode])
+    assert(len(filepath) > 0)
+    assert(type(internal_path) in [str, unicode])
+    assert(len(internal_path) > 0)
+    try:
+##        logging.debug('Zipping {0!r} as {1!r}'.format(filepath, internal_path))# PERFORMANCE This might cause slowdowns, disable outside testing
+        zip_obj.write(filepath, internal_path)
+        return True
+    except OSError, err:
+        logging.error(err)
+    return False
+
+
+def add_column_to_zip(zip_obj, column_value, images_dir, board_name):
+    filepath = make_img_path(root=images_dir, m_type='', filename=column_value)
+    internal_path = make_img_path(root=images_dir, m_type='', filename=column_value)
+    return add_to_zip(zip_obj, filepath, internal_path)
+
+
+def add_row_to_zip(zip_obj, row, images_dir, board_name):
+    """Add the files for one row to the supplied zip file."""
+    column_names = ['media', 'preview_op', 'preview_reply']
+    for column_name in column_names:
+        column_value = row[column_value]
+        add_column_to_zip(zip_obj, column_value, images_dir, board_name)
+    return
+
+
+def dump_rows_to_csv(query, csv_filepath):
+    """Dump rows from our SQLite DB into CSV, so we can easily package them in our export zip"""
+    assert(type(csv_filepath) in [str, unicode])
+    assert(len(csv_filepath) > 0)
+    logging.debug('Dumping exported rows to CSV')
+    with open(csv_filepath, 'wb') as csvfile:
+        outcsv = csv.writer(csvfile, delimiter=',',quotechar='"', quoting = csv.QUOTE_ALL, lineterminator='\n')
+        # Write header
+        header = minidb.Image.__table__.columns.keys()
+        outcsv.writerow(header)
+        # Write records
+        for record in query.all():# Write only images in the specified range
+            outrow = [getattr(record, c) for c in header ]
+    ##        logging.debug('outrow = {0!r}'.format(outrow))# PERFORMANCE This might cause slowdowns, disable outside testing
+            outcsv.writerow(outrow)
+    assert(os.path.exists(csv_filepath))# Be sure an output file was created.
+    return
+
+def make_img_path(root, m_type, filename):
+    """
+    root: path of FoolFuuka images dir
+    m_type: media_type, 'image' for fullsized media or 'thumb' for thumbnails (either op or reply)
+    boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+    """
+    assert(type(root) in [str, unicode])
+    assert(m_type in ['image', 'thumb'])# Only supported modes
+    assert(type(filename) in [str, unicode])
+    assert(len(filename) > 4)# We can't generate a path is this is lower, and the value is based on unix time so should always be over 1,000,000
+    filepath = os.path.join(images_dir, board_name,  m_type, filename[0:4], filename[4:6], filename)# string positions 0,1,2,3/4,5/filename
+    return filepath
+
+##def generate_image_filepath(board_dir, filename):
+##    # Expects filename to look like: '1536631035276.webm'
+##    # Outputs: 'BASE/153/6/1536631035276.webm'
+##    # boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+##    # base/image/1536/63/1536631035276.webm
+##    assert(len(filename) > 4)# We can't generate a path is this is lower, and the value is based on unix time so should always be over 1,000,000
+##    media_filepath = os.path.join(board_dir, filename[0:4], filename[4:6], filename)# string positions 0,1,2,3/4,5/filename
+##    return media_filepath
+##
+##
+##def generate_full_image_filepath(images_dir, board_name, filename):
+##    # boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+##    board_dir = os.path.join(images_dir, board_name,  'image')
+##    full_image_filepath = generate_image_filepath(board_dir, filename)
+##    return full_image_filepath
+##
+##
+##def generate_thumbnail_image_filepath(images_dir, board_name, filename):
+##    # boards/<boardName>/<thumb or image>/<char 0-3>/<char 4-5>/<full image name>
+##    board_dir = os.path.join(images_dir, board_name, 'thumb')
+##    full_image_filepath = generate_image_filepath(board_dir, filename)
+##    return full_image_filepath
+
 
 def import_from_csv(db, csv_filepath, board_name, max_import_rows=1000):
     """Read data from a CSV file into our SQLite DB"""
@@ -101,46 +188,10 @@ def import_from_csv(db, csv_filepath, board_name, max_import_rows=1000):
     return
 
 
-
-def add_to_zip(zip_obj, filepath, internal_path):
-    """Return whether file was added to zip"""
-    assert(type(filepath) in [str, unicode])
-    assert(len(filepath) > 0)
-    assert(type(internal_path) in [str, unicode])
-    assert(len(internal_path) > 0)
-    try:
-##        logging.debug('Zipping {0!r} as {1!r}'.format(filepath, internal_path))# PERFORMANCE This might cause slowdowns, disable outside testing
-        zip_obj.write(filepath, internal_path)
-        return True
-    except OSError, err:
-        logging.error(err)
-    return False
-
-
-def dump_rows_to_csv(query, csv_filepath):
-    """Dump rows from our SQLite DB into CSV, so we can easily package them in our export zip"""
-    assert(type(csv_filepath) in [str, unicode])
-    assert(len(csv_filepath) > 0)
-    logging.debug('Dumping exported rows to CSV')
-    with open(csv_filepath, 'wb') as csvfile:
-        outcsv = csv.writer(csvfile, delimiter=',',quotechar='"', quoting = csv.QUOTE_ALL, lineterminator='\n')
-        # Write header
-        header = minidb.Image.__table__.columns.keys()
-        outcsv.writerow(header)
-        # Write records
-        for record in query.all():# Write only images in the specified range
-            outrow = [getattr(record, c) for c in header ]
-    ##        logging.debug('outrow = {0!r}'.format(outrow))# PERFORMANCE This might cause slowdowns, disable outside testing
-            outcsv.writerow(outrow)
-    assert(os.path.exists(csv_filepath))# Be sure an output file was created.
-    return
-
-
-
-def export_to_zip(db, zip_filepath, image_dir, run_name, board_name, temp_dir='temp', max_export_rows=1000, ):
+def export_to_zip(db, zip_filepath, images_dir, run_name, board_name, temp_dir='temp', max_export_rows=1000, ):
     """
     zip_filepath: Where on the disk the zip file will end up.
-    image_dir: Path to the Foolfuuka installation's images dir.
+    images_dir: Path to the Foolfuuka installation's images dir.
     run_name: What we're calling this run and naming its files.
     temp_dir: Where we can store things while we're working.
     max_export_rows: How many should we dump at once (Maximum?).
@@ -149,8 +200,8 @@ def export_to_zip(db, zip_filepath, image_dir, run_name, board_name, temp_dir='t
     # Validate arguments
     assert(type(zip_filepath) in [str, unicode])
     assert(len(zip_filepath) > 0)
-    assert(type(image_dir) in [str, unicode])
-    assert(len(image_dir) > 0)
+    assert(type(images_dir) in [str, unicode])
+    assert(len(images_dir) > 0)
     assert(type(run_name) in [str, unicode])
     assert(len(run_name) > 0)
     assert(type(board_name) in [str, unicode])
@@ -189,6 +240,9 @@ def export_to_zip(db, zip_filepath, image_dir, run_name, board_name, temp_dir='t
             internal_path=export_csv_filename# Root level in zip
         )
         # Iterate over results to export
+        file_counter = 0# Total number of files attempted.
+        failed_file_counter = 0# Total number of files that had a failure in some way.
+        success_file_counter = 0# Total number of files that were successfully added to zip.
         export_row_counter = 0
         for image_row in image_query:
             export_row_counter += 1
@@ -197,29 +251,102 @@ def export_to_zip(db, zip_filepath, image_dir, run_name, board_name, temp_dir='t
             logging.debug('image_row={0!r}'.format(image_row))# DISABLE FOR PERFORMANCE
 
             # For each result to export:
+            row_primary_key = image_row.origin_media_id
             print('SIMULATE zipping result general')
 
             # Add filename_full (FF media) to zip
-            print('SIMULATE zipping result filename_full (FF media)')
-            media = image_row.filename_full
-
-            # Add  filename_thumb_op (FF preview_op) to zip
-            print('SIMULATE zipping result filename_thumb_op (FF preview_op)')
+            logging.info('SIMULATE zipping result filename_full (FF media)')
+            filename_full = image_row.filename_full
+            logging.debug('filename_full={0!r}')
+            if filename_full:
+                # Generate paths
+                filepath_full = generate_full_image_filepath(# Filesystem
+                    images_dir=images_dir,
+                    board_name=board_name,
+                    filename=filename_full
+                )
+                zip_filepath_full = generate_full_image_filepath(# Zip internal
+                    images_dir='',
+                    board_name=board_name,
+                    filename=filename_full
+                )
+                # Put in zip file
+                media_success = add_to_zip(
+                    zip_obj=myzip,
+                    filepath=filepath_full,
+                    internal_path=zip_filepath_full,# Zip internal
+                )
+                if media_success:
+                    success_file_counter += 1
+                else:
+                    failed_file_counter += 1
+                file_counter += 1
+            # Add filename_thumb_op (FF preview_op) to zip
             filename_thumb_op = image_row.filename_thumb_op
+            logging.debug('filename_thumb_op={0!r}')
 
+            if filename_thumb_op:
+                # Generate paths
+                thumb_op_filepath = generate_thumbnail_image_filepath(# Filesystem
+                    images_dir=images_dir,
+                    board_name=board_name,
+                    filename=filename_thumb_op
+                )
+                thumb_op_zippath = generate_thumbnail_image_filepath(# Zip internal
+                    images_dir='',
+                    board_name=board_name,
+                    filename=filename_thumb_op
+                )
+                # Put in zip file
+                preview_op_success = add_to_zip(
+                    zip_obj=myzip,
+                    filepath=thumb_op_filepath,
+                    internal_path=thumb_op_zippath,# Zip internal
+                )
+                if preview_op_success:
+                    success_file_counter += 1
+                else:
+                    failed_file_counter += 1
+                file_counter += 1
             # Add filename_thumb_reply (FF preview_reply) to zip
-            print('SIMULATE zipping result filename_thumb_reply (FF preview_reply)')
             filename_thumb_reply = image_row.filename_thumb_reply
-
-            # Mark row as processed
-            db.mark_done(image_row)
+            logging.debug('filename_thumb_reply={0!r}')
+            if rowfilename_thumb_reply:
+                # Generate paths
+                thumb_reply_filepath = generate_thumbnail_image_filepath(# Filesystem
+                    images_dir=images_dir,
+                    board_name=board_name,
+                    filename=filename_thumb_reply
+                )
+                thumb_reply_zippath = generate_thumbnail_image_filepath(# Zip internal
+                    images_dir='',
+                    board_name=board_name,
+                    filename=filename_thumb_reply
+                )
+                # Put in zip file
+                preview_reply_success = add_to_zip(
+                    zip_obj=myzip,
+                    filepath=thumb_reply_filepath,
+                    internal_path=thumb_reply_zippath
+                )
+                if preview_reply_success:
+                    success_file_counter += 1
+                else:
+                    failed_file_counter += 1
+                file_counter += 1
+            db.mark_done(image_row)# Mark row as processed
             continue
+        # After zipping rows:
+        logging.debug('row_counter = {rc}'.format(rc=row_counter))
+        logging.debug('file_counter = {tot}, success_file_counter = {suc}, failed_file_counter = {fail}'.format(
+            tot=file_counter, suc=success_file_counter, fail=failed_file_counter
+            ))
         # Store run metadata as JSON
         logging.debug('Saving info about this run to zip')
         run_info = {
             'format_version': 1,# Increment this each time something changes how this output is made.
             'zip_filepath': zip_filepath,
-            'image_dir': image_dir,
+            'images_dir': images_dir,
             'run_name': run_name,
             'temp_dir': temp_dir,
             'max_export_rows': max_export_rows,
@@ -234,6 +361,7 @@ def export_to_zip(db, zip_filepath, image_dir, run_name, board_name, temp_dir='t
             filepath=temp_metadata_filepath,
             internal_path=os.path.basename(temp_metadata_filepath)# Root level in zip
         )
+    # After working with the zip file
     assert(os.path.exists(temp_zip_filepath))# If the zip doesn't exist at this point we're fucked.
     logging.info('Finished adding things to zip file')
     # Commit changes to DB now that zip file is finished
